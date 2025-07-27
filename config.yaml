@@ -1,0 +1,12 @@
+start_urls:
+  - "https://eenadu.net"
+depth_limit: 999999999
+output_dir: "output"
+delay_between_requests: 1         # in seconds
+max_articles: 1500
+proxy_rotation: true
+threads: 5                        # Number of concurrent threads
+respect_robots_txt: false
+proxy_attempts_per_url: 20
+proxy_download_url: "" # replace with a .txt file URL containing proxies
+max_retries: 3
