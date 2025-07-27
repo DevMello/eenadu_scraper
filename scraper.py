@@ -22,10 +22,10 @@ class Scraper:
         self.proxies = []
         self.bad_proxies = set()
         self.fixed_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0"
+        self.user_agent = UserAgent()
         import threading
         self.visited_urls = set()
         self.visited_lock = threading.Lock()
-        self.allowed_domains = None  # Allow all domains containing 'eenadu.net'
         self.already_downloaded_urls = self._load_downloaded_urls()
 
     def _load_downloaded_urls(self):
@@ -48,15 +48,15 @@ class Scraper:
         """Downloads proxies from the configured URL."""
         url = self.config.get('proxy_download_url')
         if not url:
-            print("No proxy download URL configured.")
+            logging.warning("No proxy download URL configured.")
             return
         try:
-            print(f"Downloading proxies from {url}...")
+            logging.info(f"Downloading proxies from {url}...")
             response = requests.get(url)
             response.raise_for_status()
             self.proxies = [line.strip() for line in response.text.splitlines() if line.strip()]
             self.bad_proxies = set() # Reset bad proxies on successful download
-            print(f"Downloaded {len(self.proxies)} proxies.")
+            logging.info(f"Downloaded {len(self.proxies)} proxies.")
         except requests.exceptions.RequestException as e:
             logging.error(f"Error downloading proxies: {e}")
             self.proxies = []
@@ -65,8 +65,8 @@ class Scraper:
         """Returns a random proxy from the list that is not in the bad_proxies set."""
         available_proxies = [p for p in self.proxies if p not in self.bad_proxies]
         if not available_proxies:
-            #print("All proxies have failed or no proxies available. Attempting to re-download.")
-            #self.download_proxies()
+            logging.warning("All proxies have failed or no proxies available. Attempting to re-download.")
+            self.download_proxies()
             available_proxies = [p for p in self.proxies if p not in self.bad_proxies] # Re-filter after download
             if not available_proxies:
                 return None # No proxies even after re-download
@@ -74,7 +74,9 @@ class Scraper:
 
     def get_user_agent(self):
         """Returns a random user agent."""
-        return self.fixed_user_agent
+        if self.fixed_user_agent:
+            return self.fixed_user_agent
+        return self.user_agent.random
 
     def make_request(self, url):
         """Makes a request to a URL with a limited number of random proxy attempts and a final direct attempt."""
@@ -84,10 +86,10 @@ class Scraper:
         for attempt in range(max_attempts):
             proxy = self.get_random_proxy()
             if not proxy:
-                #print("No available proxies to try.")
+                logging.warning("No available proxies to try.")
                 break  # Exit the loop if no proxies are available
 
-            print(f"Attempt {attempt + 1}/{max_attempts} for {url} using proxy: {proxy}")
+            logging.info(f"Attempt {attempt + 1}/{max_attempts} for {url} using proxy: {proxy}")
             proxies = {'http': proxy, 'https': proxy}
             try:
                 time.sleep(self.config.get('delay_between_requests', 1))
@@ -99,7 +101,7 @@ class Scraper:
                 self.bad_proxies.add(proxy)
 
         # Final fallback: try a direct request without a proxy
-        #print(f"All proxy attempts failed for {url}. Trying a direct request...")
+        logging.info(f"All proxy attempts failed for {url}. Trying a direct request...")
         try:
             time.sleep(self.config.get('delay_between_requests', 1))
             response = requests.get(url, headers=headers, timeout=10, verify=False)
@@ -128,7 +130,7 @@ class Scraper:
                 if len(self.visited_urls) >= max_articles or url in self.visited_urls:
                     return []
                 self.visited_urls.add(url)
-            print(f"Crawling: {url} at depth {depth}")
+            logging.info(f"Crawling: {url} at depth {depth}")
             response = self.make_request(url)
             if not response:
                 return []
@@ -161,7 +163,7 @@ class Scraper:
                     try:
                         result = future.result()
                     except Exception as exc:
-                        print(f"Exception crawling {url}: {exc}")
+                        logging.error(f"Exception crawling {url}: {exc}")
                         continue
                     if not result:
                         continue
@@ -190,7 +192,7 @@ class Scraper:
             response = requests.get(url, headers=headers, timeout=10, verify=False)
             response.raise_for_status()
         except Exception as e:
-            print(f"Request failed for {url} with user agent {user_agent_str}: {e}")
+            logging.error(f"Request failed for {url} with user agent {user_agent_str}: {e}")
             return None, None, user_agent_str
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -198,13 +200,13 @@ class Scraper:
         # Extract the title
         title_tag = soup.find('h1', class_='red')
         title = title_tag.get_text(strip=True) if title_tag else 'No Title Found'
-        print(f"Scraping article: {title} from {url}")
+        logging.info(f"Scraping article: {title} from {url}")
 
         # Extract the content
         article_container = soup.find('div', class_='two-col-left-block box-shadow telugu_uni_body fullstory fnt-txt')
         content = 'No Content Found'
         if article_container:
-            print(f"Found article container for {url}")
+            logging.info(f"Found article container for {url}")
             text_elements = article_container.find_all(['p', 'h2'])
             filtered_content_parts = []
             for element in text_elements:

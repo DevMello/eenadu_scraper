@@ -14,7 +14,7 @@ def load_proxies():
 
 def setup_logging():
     """Sets up logging to file."""
-    logging.basicConfig(filename='errors.log', 
-                        level=logging.ERROR,
+    logging.basicConfig(filename='output.log', 
+                        level=logging.NOTSET,
                         format='%(asctime)s - %(levelname)s - %(message)s')
 

@@ -1,30 +1,3 @@
-# import csv
-# from scraper import Scraper
-
-# def load_urls(filename='output/mapping.csv'):
-#     urls = []
-#     with open(filename, 'r', encoding='utf-8') as f:
-#         reader = csv.DictReader(f)
-#         for row in reader:
-#             urls.append(row['url'])
-#     return urls
-
-# def main():
-#     scraper = Scraper()
-#     scraper.proxies = []  # Disable proxies for direct requests
-#     urls = load_urls()
-#     for url in urls:
-#         print(f"Testing direct scrape for: {url}")
-#         title, content, user_agent = scraper.scrape_article(url)
-#         if title and content and content != 'No Content Found':
-#             print(f"SUCCESS: {url}\nTitle: {title}\nContent length: {len(content)}\n")
-#             print(f"Content preview: {content}\n")
-#         else:
-#             print(f"FAILED: {url}\n")
-
-# if __name__ == "__main__":
-#     main()
-
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
